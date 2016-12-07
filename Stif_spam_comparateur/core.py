@@ -25,8 +25,9 @@ def weekly_messages_to_be_send(date,day=1):
     :return:
     """
 
-    dict_result = scandir(source_dir,date,day)
-    dict_final_result=total_result_by_day_and_device(dict_result)
+    list_result = scandir(source_dir,date,day)
+    dict_final_result=total_result_by_day_and_device(list_result)
+    print("Apres result by day = {0}".format(dict_final_result))
     write_result(dict_final_result)
 
 
@@ -41,38 +42,42 @@ def adding_day(date,day):
 
     first_day=datetime.datetime.strptime(date,"%Y%m%d")
     next_day_to_check = first_day + datetime.timedelta(day)
-    next_day_to_check = str(next_day_to_check)
-    next_day_to_check = next_day_to_check[0:10]
-    return next_day_to_check
+    return next_day_to_check.strftime("%Y%m%d")
 
 
 
-def total_result_by_day_and_device(dict_result):
+
+def total_result_by_day_and_device(list_result):
     """
     Aggrege les informations récupérées en nombre d'envois par mobile & date, plutot que par fichier csv.
-    :param dict_result: les date + mobile + nb d'envoi de chaque csv.
+    :param list_result: les date + mobile + nb d'envoi de chaque csv.
     :return: un dictionnaire au format {date:{mobile:nb_envois}}
     """
 
     dico = {}
     dico = dico
-    for i in dict_result:
+    for i in list_result:
         #Est ce que j'ai deja la date dans mon dico?
-        if i[0] in dico:
+        if i.date in dico:
             #est ce que j'ai deja le smartphone dans mon dico?
-            if i[1] in dico[i[0]]:
+            if i.device in dico[i.date]:
                 #Je l'ai, j'additionne donc les valeurs.
-                dico[i[0]][i[1]] = int(dico[i[0]][i[1]]) + int(i[2])
+                dico[i.date][i.device] = int(dico[i.date][i.device]) + int(i.nb_sent)
             else:
                 #Je ne l'ai pas, je créé donc le smartphone dans mon dico[date]
-                dico2 = {i[1]:i[2]}
-                dico[i[0]].update(dico2)
+                dico2 = {i.device:i.nb_sent}
+                dico[i.date].update(dico2)
         else:
             #je créé la date dans mon dico avec le smartphone et le nombre d'envois correspondant.
-            dico[i[0]] ={i[1]:i[2]}
+            dico[i.date] ={i.device:i.nb_sent}
     return dico
 
 
+class MessagesSentFromAT(object):
+    def __init__(self, date, device, nb_sent):
+        self.date = date
+        self.device = device
+        self.nb_sent = nb_sent
 
 
 
@@ -114,8 +119,7 @@ def scandir(source_dir,date,day):
             for i in range(day):
             #je regarde si ce fichier corresponds à une date que je cherche
                 new_date = adding_day(date,i)         #J'ajoute i à la date, en partant de 0, pour faire le tour de la serie de days.
-                new_date =(str(new_date).replace("-","")) #Je reconverti la date 2016-11-12 en 20161112 pour qu'elle corresponde au str que je cherche.
-                if str(new_date) in file:
+                if new_date in file:
                     list_result.extend(separate_ios_android(source_dir + file,new_date))
                     #print(list_result)
                     break    #j'ai la date, pas besoin de poursuivre.
@@ -149,8 +153,8 @@ def separate_ios_android(file,new_date):
                 nb_android += 1
             elif "IOS" in row[1]:
                 nb_ios += 1
-        list_result.append([str(new_date), "iOS", str(nb_ios)])
-        list_result.append([str(new_date),"Android", str(nb_android)])
+        list_result.append(MessagesSentFromAT(str(new_date), "iOS", str(nb_ios)))
+        list_result.append(MessagesSentFromAT(str(new_date),"Android", str(nb_android)))
 
     return list_result
 
