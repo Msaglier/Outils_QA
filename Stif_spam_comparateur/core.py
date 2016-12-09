@@ -18,21 +18,21 @@ result_file = 'C:/Users/msaglier\Desktop\CanalTP\SPAM\AT/result.txt'
 
 
 
-def weekly_messages_to_be_send(date,day=1):
+def weekly_messages_to_be_send(date, day=1):
     """
     Regarde les fichiers csv de AT et regarde combien concernent iOS et combien Android, pour les comparer ensuite à ceux envoyés.
     :param date : Je veux le nombre d'envois iOS et Android contenus dans les fichiers csv contenant cette date.
     :return:
     """
 
-    list_result = scandir(source_dir,date,day)
+    list_result = scandir(source_dir, date, day)
     dict_final_result=total_result_by_day_and_device(list_result)
-    print("Apres result by day = {0}".format(dict_final_result))
+    #print("Apres result by day = {0}".format(dict_final_result))
     write_result(dict_final_result)
 
 
 
-def adding_day(date,day):
+def adding_day(date, day):
     """
     Permets de connaitre quelle date nous serons dans x days de la date consultée.
     :param date: La date de reference.
@@ -79,6 +79,11 @@ class MessagesSentFromAT(object):
         self.device = device
         self.nb_sent = nb_sent
 
+    def __eq__(self, other):
+        return self.date == other.date and self.device == other.device and self.nb_sent == other.nb_sent
+
+
+
 
 
 
@@ -100,7 +105,7 @@ def write_result(dict_final_result):
 
 
 
-def scandir(source_dir,date,day):
+def scandir(source_dir, date, day):
     """
     regarde s'il y a des fichiers .csv dans le dossier source.
     on ne regarde pas les dossiers à l'interieur du dossier principal.
@@ -112,7 +117,6 @@ def scandir(source_dir,date,day):
 
     list_result = []
     for file in os.listdir(source_dir):
-        file = file.lower()
         #print("je regarde si csv")
         if file.lower().endswith(".csv"):
             #print("j'ai un csv")
@@ -133,7 +137,7 @@ def scandir(source_dir,date,day):
     return list_result
 
 
-def separate_ios_android(file,new_date):
+def separate_ios_android(file, new_date):
     """
     on distingue pour chaque fichier csv les envois iOS et les envois Android. Cette information se trouve dans la seconde colonne.
     :param file : le dossier + nom du fichier que l'on decortique.
