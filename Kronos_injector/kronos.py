@@ -8,8 +8,8 @@ import json
 
 
 class Subscriber():
-    def __init__(self,external_id, coverage, firstname, lastname):
-        self.external_id = external_id
+    def __init__(self, prefixe, external_id, coverage, firstname, lastname):
+        self.external_id = prefixe + "_" + external_id
         self.coverage = coverage
         self.firstname = firstname
         self.lastname = lastname
@@ -17,9 +17,9 @@ class Subscriber():
 
 
 class Subscription():
-    def __init__(self,owner, address, channel_type, address_type, pt_object, pt_object_type, days, active,
+    def __init__(self, prefixe, owner, address, channel_type, address_type, pt_object, pt_object_type, days, active,
                  monitoring_begin, monitoring_end):
-        self.owner = owner
+        self.owner = prefixe + '_' + owner
         self.channel_type = channel_type
         self.address_type = address_type
         self.address = address
@@ -61,7 +61,7 @@ class Subscription():
 
 
 class Kronos():
-    def __init__(self, injector, subscribers_file, subscriptions_file):
+    def __init__(self, injector, subscribers_file=None, subscriptions_file=None):
         self.injector = injector
         self.subscribers_file = subscribers_file
         self.subscriptions_file = subscriptions_file
@@ -75,7 +75,7 @@ class Kronos():
         self.add_subscriptions_to_subscribers()
         self.create_subscribers_with_subscriptions()
 
-    def clean(self):
+    def clean(self, all=None):
         if not self.injector.kronos_url:
             self.injector.terminate()
         else:
@@ -88,13 +88,26 @@ class Kronos():
 
             for content in data:
                 for key in content:
-                    if key == "id":
+                    if key == 'external_id':
+                        print('Debug : external id found : ', content[key])
+                        prefixe_len = len(self.injector.prefixe)
+                        prefixe_to_check = content[key][:prefixe_len]
+                        if all != True:
+                            if prefixe_to_check != self.injector.prefixe:
+                                print(">>> Prefixe is {0} and doesnt match {1}. Not deleted.".format(prefixe_to_check,
+                                                                                                 self.injector.prefixe))
+                                break
+
+                    if key == 'id':
                         url_to_delete = url + "/" + content[key]
                         requests.delete(url_to_delete, headers=self.injector.kronos_header)
                         # confirmer la destruction en faisant un get ensuite?
-                        print(">>> This subscriber has been deleted : {0}".format(url_to_delete))
+                        print(">>> This subscriber '{0}' "
+                              "has been deleted : {1}".format(content['external_id'], url_to_delete))
 
-            print(">> Kronos cleaned up on {0}".format(url))
+            else:
+                print('No content in data found. No subscriber deleted.')
+        print(">> Kronos cleaned up over")
 
 
     def import_subscribers(self, subscribers_file):
@@ -111,7 +124,8 @@ class Kronos():
         with open(subscribers_file) as subscribers:
             reader = csv.reader(subscribers, delimiter=';', quoting=csv.QUOTE_NONE)
             for row in reader:
-                subscriber = Subscriber(row[0],row[1],row[2],row[3])
+                subscriber = Subscriber(prefixe=self.injector.prefixe, external_id=row[0],coverage=row[1],
+                                        firstname=row[2], lastname=row[3])
                 subscriber_list.append(subscriber)
 
         self.subscribers = subscriber_list
@@ -131,7 +145,7 @@ class Kronos():
             for row in reader:
                 # owner, address, channel_type, address_type, pt_object, pt_object_type, days, active, pub_begin,
                 # pub_end, app_begin, app_end
-                subscription = Subscription(owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],
+                subscription = Subscription(self.injector.prefixe, owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],
                                             pt_object=row[4],pt_object_type=row[5],days=row[6], active=row[7],
                                             monitoring_begin=row[8],monitoring_end=row[9])
                 subscription_list.append(subscription)
