@@ -17,7 +17,8 @@ class Subscriber():
 
 
 class Subscription():
-    def __init__(self,owner, address, channel_type, address_type, pt_object, pt_object_type, days, hours, *args):
+    def __init__(self,owner, address, channel_type, address_type, pt_object, pt_object_type, days, active,
+                 monitoring_begin, monitoring_end):
         self.owner = owner
         self.channel_type = channel_type
         self.address_type = address_type
@@ -25,14 +26,38 @@ class Subscription():
         self.pt_object = pt_object
         self.pt_object_type = pt_object_type
         self.days = days
-        self.hours = []
+        self.active = active
+        self.monitoring_period = None
 
-        len_hours = int(len(hours))
-        if len_hours % 2 == 0: # Nombre pair
-            for hour in hours:
-                self.hours.append(hour)
+        monitoring_begin = self.convert_multidates_in_tuple(monitoring_begin)
+        monitoring_end = self.convert_multidates_in_tuple(monitoring_end)
+        # tuple : (list application begin, list2 application end)
+        self.monitoring_period = self.create_monitoring_period(monitoring_begin, monitoring_end)
+
+    def convert_multidates_in_tuple(self, string):
+        list = string.replace(' ','')
+        list = list.split(',')
+        return list
+
+    def create_monitoring_period(self, begin_date, end_date):
+        if type(begin_date) != list or type(end_date) != list:
+            return False, 'Bad type'
         else:
-            self.hours = None
+            if len(begin_date) == len(end_date):
+                for dates_to_check in (begin_date, end_date):
+                    for each_date in dates_to_check:
+                        if len(each_date) == 8:
+                            if each_date[2] == ':' and each_date[5] == ':':
+                                continue
+                            # Do not have ':'
+                            else:
+                                return False, 'No ":" as separator.'
+                        # do not have 8 chars
+                        else:
+                            return False, 'Do not have 8 chars'
+                return (begin_date, end_date, len(begin_date))
+            else:
+                return False, 'Should have as many begin dates than end dates'
 
 
 class Kronos():
@@ -104,8 +129,11 @@ class Kronos():
         with open(subscription_file) as subscriptions:
             reader = csv.reader(subscriptions,delimiter=';', quoting=csv.QUOTE_NONE)
             for row in reader:
-                # owner, address, channel_type, address_type, pt_object, pt_object_type, days, *args
-                subscription = Subscription(owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],pt_object=row[4],pt_object_type=row[5],days=row[6],hours=(row[7],row[8]))
+                # owner, address, channel_type, address_type, pt_object, pt_object_type, days, active, pub_begin,
+                # pub_end, app_begin, app_end
+                subscription = Subscription(owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],
+                                            pt_object=row[4],pt_object_type=row[5],days=row[6], active=row[7],
+                                            monitoring_begin=row[8],monitoring_end=row[9])
                 subscription_list.append(subscription)
 
         self.subscriptions = subscription_list
@@ -145,7 +173,7 @@ class Kronos():
             r = requests.post(self.injector.kronos_url + '/subscribers', headers = self.injector.kronos_header,
                               data = json.dumps(subscriber_to_create))
             if self.get_error_request(r):
-                print(">>> Subscriber was not created.")
+                print(">>>> Subscriber was not created.")
                 subscriber_not_created += 0
                 continue
 
@@ -161,9 +189,7 @@ class Kronos():
                     subscription_not_created += 1
                     continue
 
-            count += 1
-            if count % 5 == 0:
-                print('...')
+            print('...')
 
         if subscriber_not_created is not 0 or subscription_not_created is not 0:
             print('>>> Some subscribers or subscriptions could not be created.')
@@ -213,20 +239,20 @@ class Kronos():
 
     def time_slots_json(self, subscription):
         time_slots = []
-        time_slot_temp = {}
-        begin = True
 
-        if subscription.hours is not None:
-            for hour in subscription.hours:
-                if begin:
-                    time_slots_begin = hour
-                    time_slot_temp['begin'] = time_slots_begin
-                    begin = False
-                else:
-                    time_slots_end = hour
-                    time_slot_temp['end'] = time_slots_end
-                    time_slots.append(time_slot_temp)
-                    begin = True
+        if type(subscription.monitoring_period) == tuple:
+            if subscription.monitoring_period[0] == False:
+                print('>>>> Subscription monitoring period wrongly formated. '
+                      'Default : 00:00:00, 23:59:59. (Error : {})'.format(subscription.monitoring_period[1]))
+                time_slots.append({"begin": "00:00:00", "end": "23:59:59"})
+            else:
+                number_of_slots = subscription.monitoring_period[2]
+                for slot in range(number_of_slots):
+                    time_slots.append({"begin":subscription.monitoring_period[0][slot],
+                                       "end":subscription.monitoring_period[1][slot]})
+        else:
+            print('>>>> Subscription monitoring period wrongly formated. Default : 00:00:00, 23:59:59.')
+            time_slots.append({"begin": "00:00:00", "end": "23:59:59"})
 
         return time_slots
 
