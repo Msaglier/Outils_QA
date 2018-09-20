@@ -8,8 +8,9 @@ import json
 
 
 class Subscriber():
-    def __init__(self, prefixe, external_id, coverage, firstname, lastname):
-        self.external_id = prefixe + "_" + external_id
+    def __init__(self, prefixe, lot, external_id, coverage, firstname, lastname):
+        str_lot = str(lot)
+        self.external_id = prefixe + "_" + external_id + '_' + str_lot
         self.coverage = coverage
         self.firstname = firstname
         self.lastname = lastname
@@ -17,12 +18,13 @@ class Subscriber():
 
 
 class Subscription():
-    def __init__(self, prefixe, owner, address, channel_type, address_type, pt_object, pt_object_type, days, active,
-                 monitoring_begin, monitoring_end):
-        self.owner = prefixe + '_' + owner
+    def __init__(self, prefixe, lot, owner, address, channel_type, address_type, pt_object, pt_object_type, days,
+                 active, monitoring_begin, monitoring_end):
+        str_lot = str(lot)
+        self.owner = prefixe + '_' + owner + '_' + str_lot
         self.channel_type = channel_type
         self.address_type = address_type
-        self.address = address
+        self.address = address + '_' + str_lot
         self.pt_object = pt_object
         self.pt_object_type = pt_object_type
         self.days = days
@@ -61,19 +63,26 @@ class Subscription():
 
 
 class Kronos():
-    def __init__(self, injector, subscribers_file=None, subscriptions_file=None):
+    def __init__(self, injector, subscribers_file=None, subscriptions_file=None, lot=1):
         self.injector = injector
         self.subscribers_file = subscribers_file
         self.subscriptions_file = subscriptions_file
         self.subscribers = []
         self.subscriptions = []
+        self.nb_of_lot = lot
 
     def launch(self):
         self.clean()
-        self.import_subscribers(self.subscribers_file)
-        self.import_subscriptions(self.subscriptions_file)
-        self.add_subscriptions_to_subscribers()
-        self.create_subscribers_with_subscriptions()
+        self.sequence()
+
+    def sequence(self):
+        while self.nb_of_lot > 0:
+            print('>>> {} lots remaining.'.format(self.nb_of_lot))
+            self.import_subscribers(self.subscribers_file)
+            self.import_subscriptions(self.subscriptions_file)
+            self.add_subscriptions_to_subscribers()
+            self.create_subscribers_with_subscriptions()
+            self.nb_of_lot -= 1
 
     def clean(self, all=None):
         if not self.injector.kronos_url:
@@ -124,7 +133,7 @@ class Kronos():
         with open(subscribers_file) as subscribers:
             reader = csv.reader(subscribers, delimiter=';', quoting=csv.QUOTE_NONE)
             for row in reader:
-                subscriber = Subscriber(prefixe=self.injector.prefixe, external_id=row[0],coverage=row[1],
+                subscriber = Subscriber(prefixe=self.injector.prefixe, lot=self.nb_of_lot, external_id=row[0],coverage=row[1],
                                         firstname=row[2], lastname=row[3])
                 subscriber_list.append(subscriber)
 
@@ -145,7 +154,7 @@ class Kronos():
             for row in reader:
                 # owner, address, channel_type, address_type, pt_object, pt_object_type, days, active, pub_begin,
                 # pub_end, app_begin, app_end
-                subscription = Subscription(self.injector.prefixe, owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],
+                subscription = Subscription(self.injector.prefixe, self.nb_of_lot, owner=row[0],address=row[1],channel_type=row[2],address_type=row[3],
                                             pt_object=row[4],pt_object_type=row[5],days=row[6], active=row[7],
                                             monitoring_begin=row[8],monitoring_end=row[9])
                 subscription_list.append(subscription)
@@ -165,9 +174,14 @@ class Kronos():
         subscription_list = self.subscriptions
 
         for subscriber in subscriber_list:
+            subscription_found = 0
             for subscription in subscription_list:
                 if subscriber.external_id == subscription.owner:
                     subscriber.subscriptions.append(subscription)
+                    subscription_found += 1
+            else:
+                if subscription_found == 0:
+                    print('>> No subscriptions found for {}.'.format(subscriber.external_id))
 
         print('>>> Subscriptions linked to subscribers.')
         print('>>> Ready to create.')
@@ -179,7 +193,6 @@ class Kronos():
         subscriber_list = self.subscribers
         subscriber_not_created = 0
         subscription_not_created = 0
-        count = 0
 
         for subscriber in subscriber_list:
             subscriber_to_create = self.subscriber_to_create(subscriber)
@@ -214,6 +227,7 @@ class Kronos():
 
     def get_error_request(self, response):
         if response.status_code == 400 or response.status_code == 401:
+            print('Error : ', response.text)
             return True
 
     def subscriber_to_create(self, subscriber):
