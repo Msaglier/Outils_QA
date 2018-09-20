@@ -20,9 +20,9 @@ class Injector():
         self.subscriptions = None
         self.prefixe = None
 
-    def launch(self, config_file, subscribers_file, subscriptions_file):
+    def launch(self, config_file, subscribers_file, subscriptions_file, lot=1):
         self.import_config(config_file)
-        self.kronos_injection(subscribers_file, subscriptions_file)
+        self.kronos_injection(subscribers_file, subscriptions_file, lot)
 
     def import_config(self, config_file):
         print('>> Starting config import for Injection.')
@@ -72,8 +72,8 @@ class Injector():
         print('> INJECTOR SELF TERMINATED. Cant go to next step.')
         sys.exit()
 
-    def kronos_injection(self, subscribers_file, subscriptions_file):
-        kronos = Kronos(self, subscribers_file, subscriptions_file)
+    def kronos_injection(self, subscribers_file, subscriptions_file, lot):
+        kronos = Kronos(self, subscribers_file, subscriptions_file, lot)
         kronos.launch()
 
     def kronos_clean(self):
@@ -94,6 +94,6 @@ if __name__ == '__main__':
     injector = Injector()
 
     print('> BEGIN')
-    injector.launch(config_file, subscribers_file, subscriptions_file)
+    injector.launch(config_file, subscribers_file, subscriptions_file, lot=3)
     # injector.kronos_clean()   # clean all subscribers created with the token from the config!
 
