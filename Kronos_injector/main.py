@@ -18,6 +18,11 @@ class Injector():
         self.kronos_header = None
         self.subscribers = None
         self.subscriptions = None
+        self.prefixe = None
+
+    def launch(self, config_file, subscribers_file, subscriptions_file):
+        self.import_config(config_file)
+        self.kronos_injection(subscribers_file, subscriptions_file)
 
     def import_config(self, config_file):
         print('>> Starting config import for Injection.')
@@ -42,6 +47,8 @@ class Injector():
                         self.kronos_url = value
                     elif key == 'chaos_url':
                         self.chaos_url = value
+                    elif key == 'prefixe':
+                        self.prefixe = value
                     else:
                         print('This {} with value {} isnt used and shouldnt be here.'.format(key, value))
 
@@ -69,6 +76,13 @@ class Injector():
         kronos = Kronos(self, subscribers_file, subscriptions_file)
         kronos.launch()
 
+    def kronos_clean(self):
+        #clean all subscribers with this token.
+        kronos = Kronos(self)
+        print('>>> Action requested : Wipe all subscribers created with token {}.'.format(self.kronos_token))
+        kronos.clean(True)
+
+
 
 if __name__ == '__main__':
 
@@ -80,19 +94,6 @@ if __name__ == '__main__':
     injector = Injector()
 
     print('> BEGIN')
-    injector.import_config(config_file)
-    injector.kronos_injection(subscribers_file, subscriptions_file)
+    injector.launch(config_file, subscribers_file, subscriptions_file)
+    # injector.kronos_clean()   # clean all subscribers created with the token from the config!
 
-
-'''
-    time.sleep(1)
-    print("\n > BEGIN : injection de perturbations dans Chaos.")
-    chaos_disruption_injector(disruption_doc)
-
-    time.sleep(1)
-    print("\n > BEGIN : Comparaison resultats obtenus VS resultats attendus")
-    # fonction a faire
-
-    time.sleep(1)
-    print("\n > END.")
-'''
