@@ -100,7 +100,14 @@ class Kronos():
                     if key == 'external_id':
                         print('Debug : external id found : ', content[key])
                         prefixe_len = len(self.injector.prefixe)
-                        prefixe_to_check = content[key][:prefixe_len]
+                        if not content[key]:
+                            print('>>> Doesnt have external_id. Not deleted.')
+                            break
+                        elif len(content[key]) >= prefixe_len:
+                            prefixe_to_check = content[key][:prefixe_len]
+                        else:
+                            print(">>> Prefixe is {0} and doesnt match. Not deleted.".format(self.injector.prefixe))
+                            break
                         if all != True:
                             if prefixe_to_check != self.injector.prefixe:
                                 print(">>> Prefixe is {0} and doesnt match {1}. Not deleted.".format(prefixe_to_check,
