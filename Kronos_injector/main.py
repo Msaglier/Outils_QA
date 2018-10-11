@@ -19,10 +19,11 @@ class Injector():
         self.subscribers = None
         self.subscriptions = None
         self.prefixe = None
+        self.lot = 1
 
     def launch(self, config_file, subscribers_file, subscriptions_file):
         self.import_config(config_file)
-        self.kronos_injection(subscribers_file, subscriptions_file)
+        self.kronos_injection(subscribers_file, subscriptions_file, self.lot)
 
     def import_config(self, config_file):
         print('>> Starting config import for Injection.')
@@ -49,6 +50,8 @@ class Injector():
                         self.chaos_url = value
                     elif key == 'prefixe':
                         self.prefixe = value
+                    elif key == 'lot':
+                        self.lot = value
                     else:
                         print('This {} with value {} isnt used and shouldnt be here.'.format(key, value))
 
@@ -72,8 +75,8 @@ class Injector():
         print('> INJECTOR SELF TERMINATED. Cant go to next step.')
         sys.exit()
 
-    def kronos_injection(self, subscribers_file, subscriptions_file):
-        kronos = Kronos(self, subscribers_file, subscriptions_file)
+    def kronos_injection(self, subscribers_file, subscriptions_file, lot):
+        kronos = Kronos(self, subscribers_file, subscriptions_file, lot)
         kronos.launch()
 
     def kronos_clean(self):

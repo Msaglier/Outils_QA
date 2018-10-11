@@ -1,14 +1,8 @@
-chaos_token;chaos_token
-contributor;contributor
-coverage;coverage
-chaos_url;chaos_url
-kronos_token;kronos_token
-kronos_url;kronos_url
-chaos_contributor;chaos_contributor
-chaos_severity;chaos_severity
-chaos_channel_notif;chaos_channel_notif
-kronos_h_authorization;kronos_h_authorization
-kronos_h_xcoverage;kronos_h_xcoverage
-kronos_h_xcontributor;kronos_h_xcontributor
-kronos_url;kronos_url
-prefixe;prefixe
+chaos_token;0fba31e3-4379-4f85-87d2-994453821a07
+contributor;shortterm.tr_qastif
+coverage;qastif
+chaos_url;http://chaosws-ws.ctp.internal.canaltp.fr
+kronos_token;Basic Mzg3NTQ0ZTMtNGM3OC00OGM0LWE1MDItN2ExMDUzODlhNTcyOg==
+kronos_url;http://kronos-ws.ctp.internal.canaltp.fr
+prefixe;Kisio
+lot;1
