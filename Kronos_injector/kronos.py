@@ -69,7 +69,7 @@ class Kronos():
         self.subscriptions_file = subscriptions_file
         self.subscribers = []
         self.subscriptions = []
-        self.nb_of_lot = lot
+        self.nb_of_lot = int(lot)
 
     def launch(self):
         self.clean()
