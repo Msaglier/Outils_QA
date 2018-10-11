@@ -19,10 +19,11 @@ class Injector():
         self.subscribers = None
         self.subscriptions = None
         self.prefixe = None
+        self.lot = 1
 
-    def launch(self, config_file, subscribers_file, subscriptions_file, lot=1):
+    def launch(self, config_file, subscribers_file, subscriptions_file):
         self.import_config(config_file)
-        self.kronos_injection(subscribers_file, subscriptions_file, lot)
+        self.kronos_injection(subscribers_file, subscriptions_file, self.lot)
 
     def import_config(self, config_file):
         print('>> Starting config import for Injection.')
@@ -49,6 +50,8 @@ class Injector():
                         self.chaos_url = value
                     elif key == 'prefixe':
                         self.prefixe = value
+                    elif key == 'lot':
+                        self.lot = value
                     else:
                         print('This {} with value {} isnt used and shouldnt be here.'.format(key, value))
 
@@ -94,6 +97,6 @@ if __name__ == '__main__':
     injector = Injector()
 
     print('> BEGIN')
-    injector.launch(config_file, subscribers_file, subscriptions_file, lot=3)
+    injector.launch(config_file, subscribers_file, subscriptions_file)
     # injector.kronos_clean()   # clean all subscribers created with the token from the config!
 
