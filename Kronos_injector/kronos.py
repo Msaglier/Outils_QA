@@ -3,7 +3,7 @@
 import requests
 import os
 import csv
-from utilities import clean_lines_in_file
+from utilities import clean_lines_in_file, str_to_bool
 import json
 
 
@@ -28,7 +28,7 @@ class Subscription():
         self.pt_object = pt_object
         self.pt_object_type = pt_object_type
         self.days = days
-        self.active = active
+        self.active = str_to_bool(active.lower())
         self.monitoring_period = None
 
         monitoring_begin = self.convert_multidates_in_tuple(monitoring_begin)
@@ -73,7 +73,7 @@ class Kronos():
 
     def launch(self):
         self.clean()
-        self.sequence()
+        #self.sequence()
 
     def sequence(self):
         while self.nb_of_lot > 0:
@@ -88,42 +88,58 @@ class Kronos():
         if not self.injector.kronos_url:
             self.injector.terminate()
         else:
-            url = self.injector.kronos_url + "/subscribers"
-
-            r = requests.get(url, headers=self.injector.kronos_header)
-            data = r.json()
+            #TO REFACTO
+            url = self.injector.kronos_url + "/subscribers?start_page=1"
 
             print('>> Starting Kronos clean up.')
 
-            for content in data:
-                for key in content:
-                    if key == 'external_id':
-                        print('Debug : external id found : ', content[key])
-                        prefixe_len = len(self.injector.prefixe)
-                        if not content[key]:
-                            print('>>> Doesnt have external_id. Not deleted.')
-                            break
-                        elif len(content[key]) >= prefixe_len:
-                            prefixe_to_check = content[key][:prefixe_len]
-                        else:
-                            print(">>> Prefixe is {0} and doesnt match. Not deleted.".format(self.injector.prefixe))
-                            break
-                        if all != True:
-                            if prefixe_to_check != self.injector.prefixe:
-                                print(">>> Prefixe is {0} and doesnt match {1}. Not deleted.".format(prefixe_to_check,
-                                                                                                 self.injector.prefixe))
-                                break
+            r = requests.get(url, headers=self.injector.kronos_header)
+            data = r.json()
+            nb_pages = -(-data['pagination']['total_result'] // data['pagination']['items_per_page'])
+            print('>>> {} pages to clean.'.format(nb_pages))
 
-                    if key == 'id':
-                        url_to_delete = url + "/" + content[key]
-                        requests.delete(url_to_delete, headers=self.injector.kronos_header)
-                        # confirmer la destruction en faisant un get ensuite?
-                        print(">>> This subscriber '{0}' "
-                              "has been deleted : {1}".format(content['external_id'], url_to_delete))
+            for page_checked in range(nb_pages +1, 0, -1):
+                url = self.injector.kronos_url + "/subscribers?start_page=" + str(page_checked)
+                print('DEBUG : url is ', url)
+                r = requests.get(url, headers=self.injector.kronos_header)
+                data = r.json()
+                data_to_check = data['subscribers']
+                self.clean_page(data_to_check, self.injector.kronos_url + "/subscribers", page_checked)
+
+        print(">> Kronos cleaned up over")
+
+    def clean_page(self, data, url, page):
+        print('>>> Cleaning page {}.'.format(page))
+        for content in data:
+            for key in content:
+                if key == 'external_id':
+                    print('Debug : external id found : ', content[key])
+                    prefixe_len = len(self.injector.prefixe)
+                    if not content[key]:
+                        print('>>> Doesnt have external_id. Not deleted.')
+                        break
+                    elif len(content[key]) >= prefixe_len:
+                        prefixe_to_check = content[key][:prefixe_len]
+                    else:
+                        print(">>> Prefixe is {0} and doesnt match. Not deleted.".format(self.injector.prefixe))
+                        break
+                    if all != True:
+                        if prefixe_to_check != self.injector.prefixe:
+                            print(">>> Prefixe is {0} and doesnt match {1}. Not deleted.".format(prefixe_to_check,
+                                                                                             self.injector.prefixe))
+                            break
+
+                if key == 'id':
+                    url_to_delete = url + "/" + content[key]
+                    requests.delete(url_to_delete, headers=self.injector.kronos_header)
+                    # confirmer la destruction en faisant un get ensuite?
+                    print(">>> This subscriber '{0}' "
+                          "has been deleted : {1}".format(content['external_id'], url_to_delete))
+                    break
 
             else:
                 print('No content in data found. No subscriber deleted.')
-        print(">> Kronos cleaned up over")
+
 
 
     def import_subscribers(self, subscribers_file):
@@ -257,6 +273,7 @@ class Kronos():
             "address": subscription.address,
             "address_type": subscription.address_type,
             "channel_type": subscription.channel_type,
+            "active": subscription.active,
             "pt_object": {
                 "id": subscription.pt_object,
                 "type": subscription.pt_object_type
